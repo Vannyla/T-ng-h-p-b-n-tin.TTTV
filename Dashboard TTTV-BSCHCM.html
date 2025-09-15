@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Tín hiệu Cổ phiếu</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8f9fa; /* White background */
+            color: #212529; /* Dark text color */
+        }
+        .signal-strength {
+            border-left: 5px solid #45dfb1; 
+        }
+        .signal-weakness {
+            border-left: 5px solid #dc3545; /* Red */
+        }
+        .header-container {
+            background-color: #213a57;
+            background-image: linear-gradient(to right, #213a57, #14919b);
+            color: #ffffff;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            padding: 1.5rem 1rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        /* Accordion Styles */
+        .card-details {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.5s ease-in-out;
+        }
+        .stock-card {
+             background-color: #ffffff;
+             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+             transition: box-shadow 0.3s ease;
+        }
+        .stock-card:hover {
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+        }
+        .stock-card.active .card-details {
+            max-height: 2000px; /* Increased max-height for AI content */
+        }
+        .stock-card.active .card-header .chevron-icon {
+            transform: rotate(180deg);
+        }
+        
+        ::placeholder {
+            color: #a0aec0;
+        }
+
+        .gemini-analysis-container {
+            border-top: 1px dashed #e2e8f0;
+            margin-top: 1rem;
+            padding-top: 1rem;
+        }
+        
+        .gemini-button {
+            background-color: #80ed99;
+            color: #213a57;
+            font-weight: bold;
+            padding: 8px 16px;
+            border-radius: 9999px;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .gemini-button:hover {
+            background-color: #45dfb1;
+            box-shadow: 0 0 15px rgba(128, 237, 153, 0.5);
+        }
+        
+        .loading-spinner {
+            border: 2px solid #a0aec0;
+            border-top: 2px solid #213a57;
+            border-radius: 50%;
+            width: 16px;
+            height: 16px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="antialiased">
+
+    <!-- Header and Search -->
+    <div class="header-container text-center mb-8">
+        <h1 class="text-3xl md:text-4xl font-bold text-white mb-2">Dashboard TỔNG HỢP - TTTV.BSC HCM</h1>
+        <div id="datetime-container" class="text-gray-300 font-medium mb-2"></div>
+        <p class="text-sm text-gray-400 mb-4">Dữ liệu giá đóng cửa ngày 15/09/2025</p>
+
+        <div class="max-w-md mx-auto">
+            <div class="relative">
+                <input type="text" id="stock-search" placeholder="Nhập mã cổ phiếu (ví dụ: BMP, VNM...)" class="w-full bg-white text-gray-800 py-3 px-4 text-lg border-2 border-transparent rounded-full focus:outline-none focus:ring-2 focus:ring-[#80ed99] transition">
+                <button id="search-btn" class="absolute right-2 top-1/2 -translate-y-1/2 bg-[#14919b] text-white rounded-full w-10 h-10 flex items-center justify-center hover:bg-[#45dfb1] transition">
+                    <i class="fas fa-search"></i>
+                </button>
+            </div>
+            <button id="reset-btn" class="mt-4 text-sm text-[#80ed99] hover:underline">Hiển thị lại tất cả</button>
+        </div>
+    </div>
+
+    <div class="container mx-auto p-4 md:p-6">
+        <!-- News Links -->
+        <div class="text-center mb-8 flex flex-wrap justify-center gap-4">
+            <a href="https://g.co/gemini/share/089a02af762c" target="_blank" rel="noopener noreferrer" class="news-link inline-block bg-[#14919b] text-white font-bold py-2 px-6 rounded-lg hover:bg-[#0b6477] transition duration-300 ease-in-out shadow-md">
+                <i class="fas fa-sun mr-2"></i>Bản tin sáng
+            </a>
+            <a href="https://g.co/gemini/share/098fb3bf2bed" target="_blank" rel="noopener noreferrer" class="news-link inline-block bg-[#0b6477] text-white font-bold py-2 px-6 rounded-lg hover:bg-[#14919b] transition duration-300 ease-in-out shadow-md">
+                <i class="fas fa-calendar-week mr-2"></i>Bản tin tuần
+            </a>
+             <a href="https://g.co/gemini/share/28752ea0a509" target="_blank" rel="noopener noreferrer" class="news-link inline-block bg-gray-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-gray-700 transition duration-300 ease-in-out shadow-md">
+                <i class="fas fa-calendar-star mr-2"></i>Sự kiện
+            </a>
+            <a href="https://vannyla.github.io/form-khach-hang/" target="_blank" rel="noopener noreferrer" class="news-link inline-block bg-gray-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-gray-700 transition duration-300 ease-in-out shadow-md">
+                <i class="fas fa-poll-h mr-2"></i>Khảo sát
+            </a>
+            <a href="#" target="_blank" rel="noopener noreferrer" class="news-link inline-block bg-gray-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-gray-700 transition duration-300 ease-in-out shadow-md">
+                <i class="fas fa-filter mr-2"></i>Bộ lọc
+            </a>
+            <a href="https://gemini.google.com/share/533cbd3715f2" target="_blank" rel="noopener noreferrer" class="news-link inline-block bg-gray-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-gray-700 transition duration-300 ease-in-out shadow-md">
+                <i class="fas fa-link mr-2"></i>Khác
+            </a>
+        </div>
+
+
+        <div id="stock-dashboard" class="grid grid-cols-1 gap-8">
+            <!-- Strength Section -->
+            <div id="strength-section">
+                <h2 class="text-2xl font-bold text-[#213a57] mb-4 border-b-2 border-[#45dfb1] pb-2">
+                    <i class="fas fa-arrow-trend-up mr-2 text-green-500"></i>TÍN HIỆU SỨC MẠNH (STRENGTH)
+                </h2>
+                <div id="strength-list" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- Stock cards will be injected here -->
+                </div>
+            </div>
+
+            <!-- Weakness Section -->
+            <div id="weakness-section">
+                <h2 class="text-2xl font-bold text-red-600 mb-4 border-b-2 border-red-500 pb-2">
+                    <i class="fas fa-arrow-trend-down mr-2 text-red-500"></i>TÍN HIỆU SUY YẾU (WEAKNESS)
+                </h2>
+                <div id="weakness-list" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- Stock cards will be injected here -->
+                </div>
+            </div>
+             <!-- No results message -->
+            <div id="no-results" class="hidden text-center py-10">
+                <i class="fas fa-box-open text-5xl text-gray-400 mb-4"></i>
+                <p class="text-xl text-gray-500">Không tìm thấy mã cổ phiếu phù hợp.</p>
+            </div>
+        </div>
+
+        <footer class="text-center mt-10 py-6 border-t border-gray-200">
+            <p class="text-gray-600 font-semibold">Chúc Quý nhà đầu tư một tuần giao dịch thành công và hiệu quả.!</p>
+        </footer>
+
+    </div>
+    
+    <script>
+        const stockData = {
+            strength: [
+                {
+                    ticker: 'BMP',
+                    name: 'Công ty Cổ phần Nhựa Bình Minh',
+                    sector: 'Vật liệu cơ bản - Sản phẩm nhựa, cao su, hóa chất',
+                    exchange: 'HSX',
+                    close_price: '151.500',
+                    change: '+0.700 | +0.46%',
+                    change_positive: true,
+                    signal: 'Test for supply (Kiểm tra nguồn cung)',
+                    analysis: 'Phiên hôm nay là một thanh giá tăng, cho thấy nỗ lực kiểm tra lượng cung bán ra ở vùng giá cao đã thành công. Lực bán yếu và được hấp thụ tốt, là một dấu hiệu tích cực cho thấy khả năng tiếp tục tăng giá.',
+                    action: 'Quan sát chặt chẽ. Có thể cân nhắc mở vị thế mua khi giá xác nhận vượt qua vùng đỉnh ngắn hạn với khối lượng giao dịch gia tăng.',
+                    counter: 'Tín hiệu "Test for supply" sẽ thất bại nếu áp lực bán bất ngờ quay trở lại mạnh mẽ trong các phiên tiếp theo, đẩy giá đóng cửa xuống dưới mức thấp nhất của phiên hôm nay.'
+                },
+                {
+                    ticker: 'C4G',
+                    name: 'Công ty Cổ phần Tập đoàn CIENCO4',
+                    sector: 'Công nghiệp - Xây dựng, xây lắp',
+                    exchange: 'UPCOM',
+                    close_price: '9.600',
+                    change: '+100 | +1.05%',
+                    change_positive: true,
+                    signal: 'Confirms return of Strength (Xác nhận sức mạnh quay trở lại)',
+                    analysis: 'Cổ phiếu có một thanh giá tăng, đóng cửa ở mức cao nhất phiên ("An Upbar closing near High"), xác nhận rằng phe mua đã hoàn toàn kiểm soát và đà tăng đang quay trở lại.',
+                    action: 'Nhà đầu tư đang nắm giữ có thể tiếp tục. Việc mua mới có thể được xem xét trong các nhịp điều chỉnh nhẹ với khối lượng thấp.',
+                    counter: 'Sức mạnh có thể chỉ là tạm thời nếu thị trường chung chuyển biến xấu hoặc cổ phiếu gặp vùng kháng cự mạnh.'
+                },
+                {
+                    ticker: 'CSV',
+                    name: 'Công ty Cổ phần Hóa chất Cơ bản Miền Nam',
+                    sector: 'Vật liệu cơ bản - Hóa chất cơ bản',
+                    exchange: 'HSX',
+                    close_price: '33.850',
+                    change: '+550 | +1.65%',
+                    change_positive: true,
+                    signal: 'Confirms return of Strength (Xác nhận sức mạnh quay trở lại)',
+                    analysis: 'Tương tự C4G, phiên tăng giá hôm nay khẳng định sự trở lại của phe mua sau một giai đoạn tích lũy hoặc điều chỉnh.',
+                    action: 'Có thể tiếp tục nắm giữ hoặc gia tăng tỷ trọng một cách thận trọng.',
+                    counter: 'Cổ phiếu có thể cần thêm thời gian đi ngang để hấp thụ nguồn cung trước khi có thể bứt phá mạnh mẽ hơn.'
+                },
+                {
+                    ticker: 'CTD',
+                    name: 'Công ty Cổ phần Xây dựng Coteccons',
+                    sector: 'Công nghiệp - Xây dựng, xây lắp',
+                    exchange: 'HSX',
+                    close_price: '81.900',
+                    change: '+5.300 | +6.92%',
+                    change_positive: true,
+                    signal: 'Indicates strength (Biểu thị sức mạnh)',
+                    analysis: 'Đây là một phiên tăng giá rất mạnh mẽ, được mô tả là "High volume upbar closing on the high" (Thanh giá tăng với khối lượng lớn, đóng cửa ở mức cao nhất). Điều này thể hiện sự nhập cuộc quyết liệt của dòng tiền lớn, một tín hiệu rất đáng tin cậy.',
+                    action: 'Nắm giữ chặt vị thế. Các vị thế mua mới nên chờ đợi nhịp kiểm tra lại (re-test) vùng giá vừa bứt phá thành công.',
+                    counter: 'Một phiên tăng giá quá nóng có thể dẫn đến áp lực chốt lời mạnh trong ngắn hạn, gây ra biến động giá.'
+                },
+                {
+                    ticker: 'CTR',
+                    name: 'Tổng Công ty Cổ phần Công trình Viettel',
+                    sector: 'Công nghiệp - Xây dựng, xây lắp',
+                    exchange: 'HSX',
+                    close_price: '92.500',
+                    change: '+3.400 | +3.82%',
+                    change_positive: true,
+                    signal: 'Confirms return of Strength (Xác nhận sức mạnh quay trở lại)',
+                    analysis: 'Thanh giá tăng và đóng cửa gần mức cao nhất phiên ("An Upbar closing near High") là một sự xác nhận rõ ràng cho đà tăng.',
+                    action: 'Ưu tiên nắm giữ.',
+                    counter: 'Cần chú ý đến phản ứng của giá khi tiệm cận các vùng đỉnh cũ hoặc các mức kháng cự quan trọng.'
+                },
+                {
+                    ticker: 'MBB',
+                    name: 'Ngân hàng Thương mại Cổ phần Quân đội',
+                    sector: 'Tài chính - Ngân hàng',
+                    exchange: 'HSX',
+                    close_price: '26.850',
+                    change: '+250 | +0.94%',
+                    change_positive: true,
+                    signal: 'Strength seen returning after a long down trend (Sức mạnh trở lại sau một xu hướng giảm dài)',
+                    analysis: 'Đây là một trong những tín hiệu sớm cho thấy khả năng tạo đáy và đảo chiều xu hướng. Dòng tiền bắt đầu quay trở lại một cách thận trọng.',
+                    action: 'Quan sát chặt chẽ. Có thể xem xét mua thăm dò với tỷ trọng nhỏ và đặt cắt lỗ nghiêm ngặt.',
+                    counter: 'Tín hiệu đảo chiều cần được xác nhận bằng những phiên tăng giá tiếp theo với sự cải thiện về khối lượng. Rủi ro xu hướng giảm tiếp diễn vẫn còn.'
+                }
+            ],
+            weakness: [
+                {
+                    ticker: 'PLX',
+                    name: 'Tập đoàn Xăng dầu Việt Nam',
+                    sector: 'Dầu khí - Thăm dò và sản xuất dầu khí',
+                    exchange: 'HSX',
+                    close_price: '35.750',
+                    change: '+150 | +0.42%',
+                    change_positive: true,
+                    signal: 'No Demand. A sign of Weakness (Không có lực cầu)',
+                    analysis: 'Mặc dù giá tăng nhẹ, nhưng đây là một thanh "No Demand" – nỗ lực đẩy giá lên không nhận được sự hưởng ứng của dòng tiền, thể hiện qua biên độ giá hẹp và (thường là) khối lượng thấp. Điều này cảnh báo rằng phe mua đang yếu đi.',
+                    action: 'Cân nhắc chốt lời hoặc hạ tỷ trọng. Không nên mua mới khi xuất hiện tín hiệu này.',
+                    counter: 'Tín hiệu "No Demand" có thể bị vô hiệu hóa nếu một phiên tăng giá mạnh mẽ với khối lượng đột biến xuất hiện ngay sau đó.'
+                },
+                {
+                    ticker: 'PVD',
+                    name: 'Tổng Công ty Cổ phần Khoan và Dịch vụ Khoan Dầu khí',
+                    sector: 'Dầu khí - Thiết bị, dịch vụ khai thác dầu mỏ',
+                    exchange: 'HSX',
+                    close_price: '23.850',
+                    change: '-50 | -0.21%',
+                    change_positive: false,
+                    signal: 'Psuedo UpThrust. Sign of Weakness (Upthrust giả)',
+                    analysis: 'Đây là hiện tượng giá cố gắng vượt lên trên một vùng kháng cự nhưng thất bại và đóng cửa ở mức thấp hơn. Nó cho thấy áp lực bán phía trên vẫn còn rất mạnh và phe mua đã không thể chiến thắng.',
+                    action: 'Thận trọng cao độ. Cân nhắc bán hoặc đặt lệnh chặn lỗ (stop-loss) để bảo vệ vị thế. Tránh các vị thế mua mới.',
+                    counter: 'Nếu giá có thể nhanh chóng lấy lại và đóng cửa vững chắc phía trên vùng kháng cự đã thử thách thất bại, tín hiệu giảm giá này sẽ không còn hiệu lực.'
+                },
+                {
+                    ticker: 'VNM',
+                    name: 'Công ty Cổ phần Sữa Việt Nam',
+                    sector: 'Hàng tiêu dùng - Sản phẩm thực phẩm',
+                    exchange: 'HSX',
+                    close_price: '63.100',
+                    change: '-100 | -0.16%',
+                    change_positive: false,
+                    signal: 'Psuedo UpThrust. Sign of Weakness (Upthrust giả)',
+                    analysis: 'Tương tự như PVD, VNM cũng xuất hiện một tín hiệu "Upthrust" giả, cho thấy nỗ lực tăng giá đã bị từ chối bởi phe bán.',
+                    action: 'Nhà đầu tư nên thận trọng, xem xét việc cơ cấu lại danh mục hoặc bán nếu giá tiếp tục diễn biến xấu.',
+                    counter: 'VNM là cổ phiếu vốn hóa lớn, đôi khi có những biến động nhiễu. Cần quan sát thêm các phiên giao dịch tới để xác nhận xu hướng rõ ràng hơn.'
+                }
+            ]
+        };
+
+        function createStockCard(stock, type) {
+            const isStrength = type === 'strength';
+            const priceChangeColor = stock.change_positive ? 'text-green-600' : 'text-red-600';
+            const cardBorder = isStrength ? 'signal-strength' : 'signal-weakness';
+            const icon = isStrength ? `<i class="fas fa-chart-line text-[#14919b] mr-2"></i>` : `<i class="fas fa-chart-area text-red-500 mr-2"></i>`;
+            const signalColor = isStrength ? 'bg-green-50 text-[#0b6477]' : 'bg-red-50 text-red-700';
+
+            return `
+                <div class="stock-card rounded-lg overflow-hidden ${cardBorder}" data-ticker="${stock.ticker}">
+                    <div class="card-header p-4 cursor-pointer flex justify-between items-center transition hover:bg-gray-50">
+                        <div class="flex items-center min-w-0">
+                            <span class="font-bold text-xl mr-3 ${isStrength ? 'text-[#0b6477]' : 'text-red-600'}">${stock.ticker}</span>
+                            <span class="text-sm text-gray-500 truncate hidden sm:block">${stock.name}</span>
+                        </div>
+                        <i class="chevron-icon fas fa-chevron-down transition-transform text-gray-400"></i>
+                    </div>
+                    <div class="card-details">
+                        <div class="p-5 border-t border-gray-200">
+                             <div class="flex justify-between items-start mb-3">
+                                <p class="text-sm text-gray-600 sm:hidden">${stock.name}</p>
+                                <span class="text-xs font-semibold bg-gray-200 text-gray-700 px-2 py-1 rounded-full">${stock.exchange}</span>
+                            </div>
+                            
+                            <div class="mb-4">
+                                <span class="text-3xl font-bold text-gray-900">${stock.close_price}</span>
+                                <span class="ml-2 text-md font-semibold ${priceChangeColor}">${stock.change}</span>
+                            </div>
+                            
+                            <div class="text-sm text-gray-600 space-y-2 mb-4">
+                                <p><i class="fas fa-briefcase w-5 text-center mr-1 text-gray-400"></i> ${stock.sector}</p>
+                            </div>
+
+                            <div class="${signalColor} p-3 rounded-lg">
+                                <h4 class="font-semibold text-md mb-2 flex items-center">${icon}Tín hiệu nổi bật</h4>
+                                <p class="font-medium italic">"${stock.signal}"</p>
+                            </div>
+                            
+                            <div class="mt-4 space-y-4 text-sm">
+                                <div>
+                                    <h5 class="font-bold text-gray-800 mb-1"><i class="fas fa-magnifying-glass-chart mr-1 text-gray-500"></i>Phân tích</h5>
+                                    <p class="text-gray-600 leading-relaxed">${stock.analysis}</p>
+                                </div>
+                                <div>
+                                    <h5 class="font-bold text-gray-800 mb-1"><i class="fas fa-lightbulb mr-1 text-yellow-500"></i>Gợi ý hành động</h5>
+                                    <p class="text-gray-600 leading-relaxed">${stock.action}</p>
+                                </div>
+                                <div>
+                                    <h5 class="font-bold text-gray-800 mb-1"><i class="fas fa-exclamation-triangle mr-1 text-orange-500"></i>Rủi ro</h5>
+                                    <p class="text-gray-600 leading-relaxed">${stock.counter}</p>
+                                </div>
+                            </div>
+
+                            <!-- Gemini AI Feature -->
+                            <div class="gemini-analysis-container">
+                                <button class="gemini-button">
+                                    ✨
+                                    <span>Phân tích chuyên sâu</span>
+                                </button>
+                                <div class="gemini-output mt-3 text-gray-700 leading-relaxed" style="display: none;"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+        
+        async function getGeminiAnalysis(stock, buttonElement) {
+            const outputElement = buttonElement.nextElementSibling;
+            
+            // Show loading state
+            outputElement.style.display = 'block';
+            outputElement.innerHTML = `
+                <div class="flex items-center gap-2 text-gray-500">
+                    <div class="loading-spinner"></div>
+                    <span>AI đang phân tích, vui lòng chờ...</span>
+                </div>
+            `;
+            buttonElement.disabled = true;
+
+            const apiKey = ""; // API key will be provided at runtime
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+            
+            const systemPrompt = "Bạn là một nhà phân tích tài chính chuyên nghiệp tại Việt Nam. Dựa vào thông tin được cung cấp về một cổ phiếu, hãy đưa ra một đoạn phân tích chuyên sâu, ngắn gọn và dễ hiểu (khoảng 3-4 câu). Tập trung vào ý nghĩa của tín hiệu kỹ thuật, các kịch bản có thể xảy ra, và những chỉ báo quan trọng nhà đầu tư cần theo dõi tiếp theo. Giữ văn phong chuyên nghiệp nhưng gần gũi.";
+            const userQuery = `Phân tích chuyên sâu về cổ phiếu ${stock.ticker} (${stock.name}). Tín hiệu kỹ thuật hiện tại là "${stock.signal}". Phân tích ban đầu: "${stock.analysis}". Gợi ý hành động: "${stock.action}". Rủi ro: "${stock.counter}".`;
+
+            const payload = {
+                contents: [{ parts: [{ text: userQuery }] }],
+                systemInstruction: {
+                    parts: [{ text: systemPrompt }]
+                },
+            };
+
+            try {
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) {
+                    throw new Error(`API error: ${response.statusText}`);
+                }
+
+                const result = await response.json();
+                const text = result.candidates?.[0]?.content?.parts?.[0]?.text;
+
+                if (text) {
+                    outputElement.innerHTML = text.replace(/\n/g, '<br>');
+                } else {
+                    throw new Error("Không nhận được phân tích hợp lệ từ AI.");
+                }
+
+            } catch (error) {
+                console.error("Gemini API call failed:", error);
+                outputElement.innerHTML = `<p class="text-red-500">Rất tiếc, đã xảy ra lỗi khi phân tích. Vui lòng thử lại sau.</p>`;
+            } finally {
+                buttonElement.style.display = 'none'; // Hide button after analysis
+            }
+        }
+
+
+        function attachEventListeners() {
+            // Accordion toggle
+            document.querySelectorAll('.card-header').forEach(header => {
+                header.addEventListener('click', () => {
+                    const card = header.closest('.stock-card');
+                    card.classList.toggle('active');
+                });
+            });
+
+            // Gemini button click
+            document.querySelectorAll('.gemini-button').forEach(button => {
+                button.addEventListener('click', (e) => {
+                    e.stopPropagation(); // Prevent accordion from closing
+                    const card = button.closest('.stock-card');
+                    const ticker = card.dataset.ticker;
+                    const stock = stockData.strength.find(s => s.ticker === ticker) || stockData.weakness.find(s => s.ticker === ticker);
+                    if (stock) {
+                        getGeminiAnalysis(stock, button);
+                    }
+                });
+            });
+        }
+
+        function renderStocks(filter = '') {
+            const strengthList = document.getElementById('strength-list');
+            const weaknessList = document.getElementById('weakness-list');
+            const strengthSection = document.getElementById('strength-section');
+            const weaknessSection = document.getElementById('weakness-section');
+            const noResults = document.getElementById('no-results');
+
+            strengthList.innerHTML = '';
+            weaknessList.innerHTML = '';
+            
+            const searchTerm = filter.trim().toUpperCase();
+
+            const filteredStrength = stockData.strength.filter(stock => stock.ticker.toUpperCase().includes(searchTerm));
+            const filteredWeakness = stockData.weakness.filter(stock => stock.ticker.toUpperCase().includes(searchTerm));
+
+            filteredStrength.forEach(stock => {
+                strengthList.innerHTML += createStockCard(stock, 'strength');
+            });
+
+            filteredWeakness.forEach(stock => {
+                weaknessList.innerHTML += createStockCard(stock, 'weakness');
+            });
+
+            strengthSection.style.display = filteredStrength.length > 0 ? 'block' : 'none';
+            weaknessSection.style.display = filteredWeakness.length > 0 ? 'block' : 'none';
+            noResults.style.display = (filteredStrength.length === 0 && filteredWeakness.length === 0) ? 'block' : 'none';
+            
+            attachEventListeners();
+        }
+        
+        function updateTime() {
+            const now = new Date();
+            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit', timeZoneName: 'short' };
+            document.getElementById('datetime-container').textContent = now.toLocaleString('vi-VN', options);
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // Initial render
+            renderStocks();
+            updateTime();
+            setInterval(updateTime, 1000);
+
+            // Search and Reset Logic
+            const searchInput = document.getElementById('stock-search');
+            const searchBtn = document.getElementById('search-btn');
+            const resetBtn = document.getElementById('reset-btn');
+
+            searchBtn.addEventListener('click', () => {
+                renderStocks(searchInput.value);
+            });
+
+            searchInput.addEventListener('keyup', (event) => {
+                if (event.key === 'Enter') {
+                    renderStocks(searchInput.value);
+                }
+            });
+            
+            resetBtn.addEventListener('click', () => {
+                searchInput.value = '';
+                renderStocks();
+            });
+        });
+    </script>
+</body>
+</html>
+
